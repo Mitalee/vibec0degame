@@ -75,6 +75,24 @@
         #restart-button:hover {
             background-color: #45a049;
         }
+        
+        .controls {
+            margin-top: 10px;
+        }
+        
+        #toggle-music {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        #toggle-music:hover {
+            background-color: #0b7dda;
+        }
     </style>
 </head>
 <body>
@@ -88,6 +106,13 @@
         </div>
     </div>
     <div id="score-display">Score: 0</div>
+    <audio id="background-music" loop>
+        <source src="background.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    <div class="controls">
+        <button id="toggle-music">🔇 Music Off</button>
+    </div>
 
     <script>
         // Game configuration
@@ -113,6 +138,26 @@
         const gameOverScreen = document.getElementById('game-over');
         const finalScoreDisplay = document.getElementById('final-score');
         const restartButton = document.getElementById('restart-button');
+        const backgroundMusic = document.getElementById('background-music');
+        const toggleMusicButton = document.getElementById('toggle-music');
+        
+        // Audio management
+        let musicPlaying = false;
+        
+        function toggleMusic() {
+            if (musicPlaying) {
+                backgroundMusic.pause();
+                toggleMusicButton.textContent = '🔇 Music Off';
+                musicPlaying = false;
+            } else {
+                backgroundMusic.play().catch(e => {
+                    console.log('Audio playback prevented by browser: ', e);
+                    alert('Click anywhere on the page to enable audio playback');
+                });
+                toggleMusicButton.textContent = '🔊 Music On';
+                musicPlaying = true;
+            }
+        }
         
         // Initialize game
         function initGame() {
@@ -282,6 +327,20 @@
             gameOverScreen.style.display = 'block';
         }
         
+        // Enable audio on first user interaction (to comply with browser autoplay policies)
+        function setupAudio() {
+            document.removeEventListener('click', setupAudio);
+            
+            // Pre-load the audio
+            backgroundMusic.load();
+            
+            // Setup music toggle button
+            toggleMusicButton.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering game click events
+                toggleMusic();
+            });
+        }
+        
         // Handle keyboard input
         document.addEventListener('keydown', e => {
             // Prevent default action for arrow keys to avoid scrolling
@@ -308,8 +367,16 @@
         // Restart button event listener
         restartButton.addEventListener('click', initGame);
         
+        // Setup event listeners
+        document.addEventListener('click', setupAudio);
+        
         // Start the game when page loads
-        window.onload = initGame;
+        window.onload = function() {
+            initGame();
+            
+            // Setup audio for browsers that don't enforce strict autoplay policies
+            setupAudio();
+        };
     </script>
 </body>
 </html>
