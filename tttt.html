@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            margin: 0;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #status {
+            margin-bottom: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #444;
+            height: 30px;
+        }
+        
+        #board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px;
+            background-color: #444;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border-radius: 5px;
+        }
+        
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .cell.x {
+            color: #f44336;
+        }
+        
+        .cell.o {
+            color: #2196F3;
+        }
+        
+        #reset-button {
+            margin-top: 30px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        #reset-button:hover {
+            background-color: #45a049;
+        }
+        
+        .winner-cell {
+            background-color: #e6f7ff !important;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Confetti container */
+        #confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+            overflow: hidden;
+            display: none;
+        }
+        
+        /* Confetti pieces */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            animation: fall linear;
+        }
+        
+        @keyframes fall {
+            0% {
+                transform: translateY(-10px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        
+        /* Sound controls */
+        .sound-controls {
+            margin-top: 15px;
+        }
+        
+        #toggle-sound {
+            padding: 8px 15px;
+            font-size: 14px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        #toggle-sound:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tic Tac Toe</h1>
+    <div id="game-container">
+        <div id="status">Player X's turn</div>
+        <div id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button id="reset-button">Reset Game</button>
+        <div class="sound-controls">
+            <button id="toggle-sound">🔊 Sound On</button>
+        </div>
+    </div>
+    
+    <!-- Confetti container -->
+    <div id="confetti-container"></div>
+    
+    <!-- Audio elements -->
+    <audio id="sound-x" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2609/2609-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-o" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2608/2608-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-win" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/1426/1426-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sound-draw" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        // Game state
+        let currentPlayer = 'X';
+        let gameBoard = ['', '', '', '', '', '', '', '', ''];
+        let gameActive = true;
+        let soundEnabled = true;
+        
+        // DOM elements
+        const statusDisplay = document.getElementById('status');
+        const cells = document.querySelectorAll('.cell');
+        const resetButton = document.getElementById('reset-button');
+        const toggleSoundButton = document.getElementById('toggle-sound');
+        
+        // Sound elements
+        const soundX = document.getElementById('sound-x');
+        const soundO = document.getElementById('sound-o');
+        const soundWin = document.getElementById('sound-win');
+        const soundDraw = document.getElementById('sound-draw');
+        
+        // Winning combinations
+        const winningConditions = [
+            [0, 1, 2], // Top row
+            [3, 4, 5], // Middle row
+            [6, 7, 8], // Bottom row
+            [0, 3, 6], // Left column
+            [1, 4, 7], // Middle column
+            [2, 5, 8], // Right column
+            [0, 4, 8], // Diagonal top-left to bottom-right
+            [2, 4, 6]  // Diagonal top-right to bottom-left
+        ];
+        
+        // Initialize event listeners
+        function initGame() {
+            cells.forEach(cell => {
+                cell.addEventListener('click', cellClicked);
+            });
+            
+            resetButton.addEventListener('click', resetGame);
+            toggleSoundButton.addEventListener('click', toggleSound);
+            
+            // Preload sounds
+            soundX.load();
+            soundO.load();
+            soundWin.load();
+            soundDraw.load();
+        }
+        
+        // Handle cell click
+        function cellClicked(event) {
+            const clickedCell = event.target;
+            const cellIndex = parseInt(clickedCell.getAttribute('data-index'));
+            
+            // Check if cell is already filled or game is not active
+            if (gameBoard[cellIndex] !== '' || !gameActive) {
+                return;
+            }
+            
+            // Update the game state
+            updateCell(clickedCell, cellIndex);
+            checkGameResult();
+        }
+        
+        // Update cell and game board
+        function updateCell(cell, index) {
+            gameBoard[index] = currentPlayer;
+            cell.textContent = currentPlayer;
+            cell.classList.add(currentPlayer.toLowerCase());
+            
+            // Play sound for move
+            if (soundEnabled) {
+                if (currentPlayer === 'X') {
+                    soundX.currentTime = 0;
+                    soundX.play().catch(e => console.log('Error playing sound:', e));
+                } else {
+                    soundO.currentTime = 0;
+                    soundO.play().catch(e => console.log('Error playing sound:', e));
+                }
+            }
+        }
+        
+        // Check for win or draw
+        function checkGameResult() {
+            let roundWon = false;
+            let winningCombination = [];
+            
+            // Check for win
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                
+                if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+                    roundWon = true;
+                    winningCombination = [a, b, c];
+                    break;
+                }
+            }
+            
+            if (roundWon) {
+                highlightWinnerCells(winningCombination);
+                statusDisplay.textContent = `Player ${currentPlayer} wins!`;
+                gameActive = false;
+                
+                // Play win sound
+                if (soundEnabled) {
+                    soundWin.currentTime = 0;
+                    soundWin.play().catch(e => console.log('Error playing sound:', e));
+                }
+                return;
+            }
+            
+            // Check for draw
+            if (!gameBoard.includes('')) {
+                statusDisplay.textContent = 'Game ended in a draw!';
+                gameActive = false;
+                
+                // Play draw sound
+                if (soundEnabled) {
+                    soundDraw.currentTime = 0;
+                    soundDraw.play().catch(e => console.log('Error playing sound:', e));
+                }
+                return;
+            }
+            
+            // Switch player
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            statusDisplay.textContent = `Player ${currentPlayer}'s turn`;
+        }
+        
+        // Highlight winning cells and start celebration
+        function highlightWinnerCells(combination) {
+            combination.forEach(index => {
+                cells[index].classList.add('winner-cell');
+            });
+            
+            // Start celebration effect
+            startCelebration();
+        }
+        
+        // Create and animate confetti
+        function startCelebration() {
+            const confettiContainer = document.getElementById('confetti-container');
+            confettiContainer.style.display = 'block';
+            confettiContainer.innerHTML = '';
+            
+            // Colors for confetti
+            const colors = ['#f44336', '#2196F3', '#FFEB3B', '#4CAF50', '#9C27B0', '#FF9800'];
+            
+            // Create confetti pieces
+            for (let i = 0; i < 150; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                
+                // Random position
+                const startPositionX = Math.random() * window.innerWidth;
+                
+                // Random color
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Random size
+                const size = Math.floor(Math.random() * 10) + 5;
+                
+                // Random animation duration
+                const duration = Math.random() * 3 + 2;
+                
+                // Set styles
+                confetti.style.left = `${startPositionX}px`;
+                confetti.style.backgroundColor = color;
+                confetti.style.width = `${size}px`;
+                confetti.style.height = `${size}px`;
+                confetti.style.animationDuration = `${duration}s`;
+                
+                // Random shape (square, circle, triangle)
+                const shape = Math.floor(Math.random() * 3);
+                if (shape === 0) {
+                    confetti.style.borderRadius = '50%'; // Circle
+                } else if (shape === 1) {
+                    confetti.style.borderRadius = '0'; // Square
+                } else {
+                    confetti.style.width = '0';
+                    confetti.style.height = '0';
+                    confetti.style.backgroundColor = 'transparent';
+                    confetti.style.borderLeft = `${size/2}px solid transparent`;
+                    confetti.style.borderRight = `${size/2}px solid transparent`;
+                    confetti.style.borderBottom = `${size}px solid ${color}`;
+                }
+                
+                confettiContainer.appendChild(confetti);
+            }
+            
+            // Remove confetti after animation completes
+            setTimeout(() => {
+                confettiContainer.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Toggle sound on/off
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            toggleSoundButton.textContent = soundEnabled ? '🔊 Sound On' : '🔇 Sound Off';
+        }
+        
+        // Reset game
+        function resetGame() {
+            currentPlayer = 'X';
+            gameBoard = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            statusDisplay.textContent = `Player ${currentPlayer}'s turn`;
+            
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('x', 'o', 'winner-cell');
+            });
+            
+            // Clear any confetti
+            const confettiContainer = document.getElementById('confetti-container');
+            confettiContainer.style.display = 'none';
+            confettiContainer.innerHTML = '';
+        }
+        
+        // Start the game when page loads
+        window.onload = initGame;
+    </script>
+</body>
+</html>
