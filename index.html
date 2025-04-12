@@ -78,6 +78,10 @@
         
         .controls {
             margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         
         #toggle-music {
@@ -92,6 +96,35 @@
         
         #toggle-music:hover {
             background-color: #0b7dda;
+        }
+        
+        .speed-controls {
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .speed-btn {
+            background-color: #555;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        
+        .speed-btn.active {
+            background-color: #4CAF50;
+        }
+        
+        .speed-btn:hover {
+            background-color: #666;
+        }
+        
+        .speed-btn.active:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
@@ -113,14 +146,22 @@
     <div class="controls">
         <button id="toggle-music">🔇 Music Off</button>
     </div>
+    <div class="speed-controls">
+        <div>Game Speed:</div>
+        <button class="speed-btn" data-speed="500">Very Slow</button>
+        <button class="speed-btn active" data-speed="350">Slow</button>
+        <button class="speed-btn" data-speed="200">Medium</button>
+        <button class="speed-btn" data-speed="100">Fast</button>
+    </div>
 
     <script>
         // Game configuration
         const config = {
             gridSize: 20,
             cellSize: 20,
-            initialSpeed: 150,
-            speedIncrease: 5
+            initialSpeed: 350,
+            speedIncrease: 1,
+            currentSpeedSetting: 'slow'
         };
         
         // Game state
@@ -131,6 +172,8 @@
         let score = 0;
         let gameInterval;
         let gameRunning = false;
+        let musicPlaying = false;
+        let soundEnabled = true;
         
         // DOM Elements
         const gameBoard = document.getElementById('game-board');
@@ -140,10 +183,39 @@
         const restartButton = document.getElementById('restart-button');
         const backgroundMusic = document.getElementById('background-music');
         const toggleMusicButton = document.getElementById('toggle-music');
+        const speedButtons = document.querySelectorAll('.speed-btn');
+        
+        // Change game speed - define this function early
+        function changeSpeed(e) {
+            // Update active button
+            speedButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            
+            // Get new speed value
+            const speedValue = parseInt(e.target.getAttribute('data-speed'));
+            
+            // Set speed setting
+            switch(speedValue) {
+                case 500: config.currentSpeedSetting = 'verySlow'; break;
+                case 350: config.currentSpeedSetting = 'slow'; break;
+                case 200: config.currentSpeedSetting = 'medium'; break;
+                case 100: config.currentSpeedSetting = 'fast'; break;
+                default: config.currentSpeedSetting = 'slow';
+            }
+            
+            // Update game speed if the game is running
+            if (gameRunning) {
+                clearInterval(gameInterval);
+                gameInterval = setInterval(gameLoop, speedValue);
+            }
+            
+            // Store the new initial speed for next game
+            config.initialSpeed = speedValue;
+        }
         
         // Audio management
-        let musicPlaying = false;
-        
         function toggleMusic() {
             if (musicPlaying) {
                 backgroundMusic.pause();
@@ -200,10 +272,21 @@
             // Hide game over screen if visible
             gameOverScreen.style.display = 'none';
             
+            // Remove any existing spacebar hints
+            const hints = gameOverScreen.querySelectorAll('.spacebar-hint');
+            hints.forEach(hint => {
+                if (hint) {
+                    gameOverScreen.removeChild(hint);
+                }
+            });
+            
             // Start game loop
             if (gameInterval) clearInterval(gameInterval);
             gameRunning = true;
-            gameInterval = setInterval(gameLoop, config.initialSpeed);
+            
+            // Get selected speed
+            const speedValue = parseInt(document.querySelector('.speed-btn.active').getAttribute('data-speed'));
+            gameInterval = setInterval(gameLoop, speedValue);
         }
         
         // Game loop
@@ -254,8 +337,18 @@
                 // Place new food
                 placeFood();
                 
-                // Increase speed
-                const newSpeed = Math.max(50, config.initialSpeed - (score / 10) * config.speedIncrease);
+                // Increase speed - but respect the current speed setting
+                let maxSpeed;
+                switch(config.currentSpeedSetting) {
+                    case 'verySlow': maxSpeed = 400; break;
+                    case 'slow': maxSpeed = 250; break;
+                    case 'medium': maxSpeed = 100; break;
+                    case 'fast': maxSpeed = 50; break;
+                    default: maxSpeed = 250;
+                }
+                
+                const baseSpeed = parseInt(document.querySelector('.speed-btn.active').getAttribute('data-speed'));
+                const newSpeed = Math.max(maxSpeed, baseSpeed - (score / 10) * config.speedIncrease);
                 clearInterval(gameInterval);
                 gameInterval = setInterval(gameLoop, newSpeed);
             } else {
@@ -325,6 +418,20 @@
             clearInterval(gameInterval);
             finalScoreDisplay.textContent = `Your score: ${score}`;
             gameOverScreen.style.display = 'block';
+            
+            // Remove any existing spacebar hint before adding a new one
+            const existingHint = gameOverScreen.querySelector('.spacebar-hint');
+            if (existingHint) {
+                gameOverScreen.removeChild(existingHint);
+            }
+            
+            // Add instruction for spacebar restart
+            const spacebarHint = document.createElement('p');
+            spacebarHint.textContent = 'Press SPACEBAR to play again';
+            spacebarHint.style.fontSize = '14px';
+            spacebarHint.style.marginTop = '5px';
+            spacebarHint.className = 'spacebar-hint';
+            gameOverScreen.appendChild(spacebarHint);
         }
         
         // Enable audio on first user interaction (to comply with browser autoplay policies)
@@ -344,10 +451,11 @@
         // Handle keyboard input
         document.addEventListener('keydown', e => {
             // Prevent default action for arrow keys to avoid scrolling
-            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space", " "].includes(e.key)) {
                 e.preventDefault();
             }
             
+            // Game controls
             switch (e.key) {
                 case 'ArrowUp':
                     if (direction !== 'down') nextDirection = 'up';
@@ -361,6 +469,13 @@
                 case 'ArrowRight':
                     if (direction !== 'left') nextDirection = 'right';
                     break;
+                case ' ':
+                case 'Space':
+                    // If game is over (game over screen is visible), reset the game
+                    if (gameOverScreen.style.display === 'block') {
+                        initGame();
+                    }
+                    break;
             }
         });
         
@@ -369,6 +484,11 @@
         
         // Setup event listeners
         document.addEventListener('click', setupAudio);
+        
+        // Setup speed buttons
+        speedButtons.forEach(button => {
+            button.addEventListener('click', changeSpeed);
+        });
         
         // Start the game when page loads
         window.onload = function() {
