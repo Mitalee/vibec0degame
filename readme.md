@@ -9,7 +9,7 @@ This repository contains two classic browser games built with pure HTML, CSS, an
 
 ## 🐍 Snake Game
 
-![snake game](image.png)
+<img width="553" alt="snake" src="https://github.com/user-attachments/assets/02fbeca0-2a0d-4101-baf2-72ea255619f0" />
 
 ### Features
 
@@ -33,9 +33,10 @@ This repository contains two classic browser games built with pure HTML, CSS, an
 
 ## ⭕ Tic Tac Toe
 
-![Tic Tac Toe Screenshot](image-1.png)
+<img width="590" alt="ttt" src="https://github.com/user-attachments/assets/153528df-4d5a-4056-bccc-1f14e7e91188" />
 
 ### Features
+
 
 - Clean, modern UI design
 - Two-player gameplay (X and O)
